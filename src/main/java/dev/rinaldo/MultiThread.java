@@ -44,35 +44,38 @@ public class MultiThread implements QuarkusApplication {
 		populaBanco();
     	
     	Instant inicio = Instant.now();
-		Supplier<Integer> tarefa = () -> {
-			try (Connection connection = dataSource.getConnection()) {
-				System.out.println("Iniciando tarefa.");
-				connection.setAutoCommit(false);
-				
-				String sqlSelect = "SELECT * FROM Compra WHERE situacao = 1 LIMIT 1 FOR UPDATE SKIP LOCKED;";
-				final PreparedStatement psSelect = connection.prepareStatement(sqlSelect);
-				String sqlUpdate = "UPDATE Compra SET situacao = 2 WHERE id = ?;";
-				final PreparedStatement psUpdate = connection.prepareStatement(sqlUpdate);
-				
-				ResultSet rsCompra = psSelect.executeQuery();
-				if (!rsCompra.next()) {
-					return -1;
-				}
-				long idCompra = rsCompra.getLong(1);
-				System.out.println("Tratando compra " + idCompra);
-				
-				TimeUnit.MILLISECONDS.sleep(new Random().nextInt(1000));
-				
-				psUpdate.setLong(1, idCompra);
-				psUpdate.executeUpdate();
-				connection.commit();
-				System.out.println("Compra " + idCompra + " tratada.");
-				
-				return 0;
-			} catch (Exception e) {
-				throw new RuntimeException(e);
-			}
-		};
+		Supplier<Integer> tarefa = new Supplier<Integer>() {
+            @Override
+            public Integer get() {
+            	try (Connection connection = dataSource.getConnection()) {
+            		System.out.println("Iniciando tarefa.");
+            		connection.setAutoCommit(false);
+            		
+            		String sqlSelect = "SELECT * FROM Compra WHERE situacao = 1 LIMIT 1 FOR UPDATE SKIP LOCKED;";
+            		final PreparedStatement psSelect = connection.prepareStatement(sqlSelect);
+            		String sqlUpdate = "UPDATE Compra SET situacao = 2 WHERE id = ?;";
+            		final PreparedStatement psUpdate = connection.prepareStatement(sqlUpdate);
+            		
+            		ResultSet rsCompra = psSelect.executeQuery();
+            		if (!rsCompra.next()) {
+            			return -1;
+            		}
+            		long idCompra = rsCompra.getLong(1);
+            		System.out.println("Tratando compra " + idCompra);
+            		
+            		TimeUnit.MILLISECONDS.sleep(new Random().nextInt(1000));
+            		
+            		psUpdate.setLong(1, idCompra);
+            		psUpdate.executeUpdate();
+            		connection.commit();
+            		System.out.println("Compra " + idCompra + " tratada.");
+            		
+            		return 0;
+            	} catch (Exception e) {
+            		throw new RuntimeException(e);
+            	}
+            }
+        };
     	
 		final Queue<Integer> codigosRetornoTarefas = new PriorityBlockingQueue<>();
 		while (true) {
